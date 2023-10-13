@@ -34,22 +34,22 @@ class Markdown {
 	#end
 
 	public static function markdownToHtml(markdown:String):String {
-		// create document
-		var document = new Document();
-
 		try {
-			// replace windows line endings with unix, and split
-			var lines = ~/(\r\n|\r)/g.replace(markdown, '\n').split("\n");
-
-			// parse ref links
-			document.parseRefLinks(lines);
-
-			// parse ast
-			var blocks = document.parseLines(lines);
+			var blocks = markdownToAst(markdown);
 			return renderHtml(blocks);
 		} catch (e:Dynamic) {
 			return '<pre>$e</pre>';
 		}
+	}
+
+	public static function markdownToAst(markdown:String):Array<Node> {
+		var document = new Document();
+
+		// replace windows line endings with unix, and split
+		var lines = ~/(\r\n|\r)/g.replace(markdown, '\n').split("\n");
+
+		document.parseRefLinks(lines);
+		return document.parseLines(lines);
 	}
 
 	public static function renderHtml(blocks:Array<Node>):String {
