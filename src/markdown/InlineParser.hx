@@ -41,6 +41,8 @@ class InlineParser {
 		new TextSyntax('<(?:!--[ ]*|/)?\\w+.*?>'),
 		// Encode "<". (Why not encode ">" too? Gruber is toying with us.)
 		new TextSyntax('<', '&lt;'),
+		// Parse "==highlighted==" tags.
+		new TagSyntax('==', 'mark'),
 		// Parse "**strong**" tags.
 		new TagSyntax('\\*\\*', 'strong'),
 		// Parse "__strong__" tags.
