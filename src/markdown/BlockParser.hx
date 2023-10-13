@@ -98,6 +98,11 @@ class BlockSyntax {
 	static var RE_CODE = new EReg('^```([^`]*)\\s*$', '');
 
 	/**
+		Custom markdown for <details>/<summary> integration.
+	**/
+	static var RE_DETSUM = new EReg('^\\+\\+\\+(\\s(.*))?$', '');
+
+	/**
 		Three or more hyphens, asterisks or underscores by themselves. Note that
 		a line like `----` is valid as both HR and SETEXT. In case of a tie,
 		SETEXT should win.
@@ -133,7 +138,7 @@ class BlockSyntax {
 		if (syntaxes == null) {
 			syntaxes = [
 				new EmptyBlockSyntax(), new BlockHtmlSyntax(), new SetextHeaderSyntax(), new HeaderSyntax(), new CodeBlockSyntax(),
-				new GitHubCodeBlockSyntax(), new BlockquoteSyntax(), new HorizontalRuleSyntax(), new UnorderedListSyntax(), new OrderedListSyntax(),
+				new GitHubCodeBlockSyntax(), new DetailsSummarySyntax(), new BlockquoteSyntax(), new HorizontalRuleSyntax(), new UnorderedListSyntax(), new OrderedListSyntax(),
 				new TableSyntax(), new ParagraphSyntax()];
 		}
 		return syntaxes;
@@ -382,6 +387,40 @@ class GitHubCodeBlockSyntax extends BlockSyntax {
 		}
 
 		return new ElementNode('pre', [code]);
+	}
+}
+
+class DetailsSummarySyntax extends BlockSyntax {
+	override function get_pattern():EReg {
+		return BlockSyntax.RE_DETSUM;
+	}
+
+	override public function parseChildLines(parser:BlockParser):Array<String> {
+		var childLines = [];
+		parser.advance();
+
+		while (!parser.isDone) {
+			if (!pattern.match(parser.current)) {
+				childLines.push(parser.current);
+				parser.advance();
+			} else {
+				parser.advance();
+				break;
+			}
+		}
+		return childLines;
+	}
+
+	override public function parse(parser:BlockParser):Node {
+		var summary = pattern.matched(2);
+		var childLines = parseChildLines(parser);
+		var children = parser.document.parseLines(childLines);
+
+		if (summary != null) {
+			children.unshift(new ElementNode('summary', parser.document.parseLines([summary])));
+		}
+
+		return new ElementNode('details', children);
 	}
 }
 
