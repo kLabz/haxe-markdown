@@ -32,6 +32,8 @@ class InlineParser {
 		new TextSyntax(' \\* '),
 		// "_" surrounded by spaces is left alone.
 		new TextSyntax(' _ '),
+		// "~" surrounded by spaces is left alone.
+		new TextSyntax(' ~ '),
 		// Leave already-encoded HTML entities alone. Ensures we don't turn
 		// "&amp;" into "&amp;amp;"
 		new TextSyntax('&[#a-zA-Z0-9]*;'),
@@ -43,6 +45,10 @@ class InlineParser {
 		new TextSyntax('<', '&lt;'),
 		// Parse "==highlighted==" tags.
 		new TagSyntax('==', 'mark'),
+		// Parse "~~deleted~~" tags.
+		new TagSyntax('~~', 'strike'),
+		// Parse "~deleted~" tags.
+		new TagSyntax('~', 'strike'),
 		// Parse "**strong**" tags.
 		new TagSyntax('\\*\\*', 'strong'),
 		// Parse "__strong__" tags.

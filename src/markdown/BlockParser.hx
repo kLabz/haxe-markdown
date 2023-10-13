@@ -90,7 +90,7 @@ class BlockSyntax {
 	/**
 		A line indented four spaces. Used for code blocks and lists.
 	**/
-	static var RE_INDENT = new EReg('^(?:    |\t)(.*)$', '');
+	static var RE_INDENT = new EReg('^(?:  |\t)(.*)$', '');
 
 	/**
 		GitHub style triple quoted code block.
@@ -120,13 +120,13 @@ class BlockSyntax {
 		three leading spaces before the marker and any number of spaces or tabs
 		after.
 	**/
-	static var RE_UL = new EReg('^[ ]{0,3}[*+-][ \\t]+(.*)$', '');
+	static var RE_UL = new EReg('^ ?[*+-](?: \\[( |x|-)\\])?[ \\t]+(.*)$', '');
 
 	/**
 		A line starting with a number like `123.`. May have up to three leading
 		spaces before the marker and any number of spaces or tabs after.
 	**/
-	static var RE_OL = new EReg('^[ ]{0,3}\\d+\\.[ \\t]+(.*)$', '');
+	static var RE_OL = new EReg('^ ?\\d+\\.(?: \\[( |x|-)\\])?[ \\t]+(.*)$', '');
 
 	/**
 		Gets the collection of built-in block parsers. To turn a series of lines
@@ -501,10 +501,6 @@ class ParagraphSyntax extends BlockSyntax {
 
 // Base class for both ordered and unordered lists.
 class ListSyntax extends BlockSyntax {
-	override function get_canEndBlock() {
-		return false;
-	}
-
 	public var listTag(default, null):String;
 
 	public function new(listTag:String) {
@@ -536,7 +532,21 @@ class ListSyntax extends BlockSyntax {
 			} else if (tryMatch(BlockSyntax.RE_UL) || tryMatch(BlockSyntax.RE_OL)) {
 				// End the current list item and start a new one.
 				endItem();
-				childLines.push(match.matched(1));
+				var line = match.matched(2);
+				switch (match.matched(1)) {
+					case null:
+					case "x":
+						line = '<input type=checkbox checked disabled /> ' + line;
+
+					case " ":
+						line = '<input type=checkbox disabled /> ' + line;
+
+					case "-":
+						line = '~~<input type=checkbox disabled /> ' + line + '~~';
+
+					case _:
+				}
+				childLines.push(line);
 			} else if (tryMatch(BlockSyntax.RE_INDENT)) {
 				// Strip off indent and add to current item.
 				childLines.push(match.matched(1));
@@ -640,15 +650,22 @@ class ListSyntax extends BlockSyntax {
 			if (blockItem) {
 				// Block list item.
 				var children = parser.document.parseLines(item.lines);
+				var nonListChildren = children.filter(c -> {
+					var c:ElementNode = cast c;
+					(c != null && c.tag != "ul" && c.tag != "ol");
+				});
 
 				// if we have a single p child we might have been forced into block
 				// mode by line breaks. if not forceBlock (empty line before/after)
 				// we can use text of p as li child <li><p>foo</p></li> -> <li>foo</li>
-				if (!item.forceBlock && children.length == 1) {
-					if ((children[0] is ElementNode)) {
-						var node:ElementNode = cast children[0];
-						if (node.tag == 'p')
-							children = node.children;
+				if (!item.forceBlock && nonListChildren.length == 1) {
+					var child = nonListChildren.shift();
+					if (child is ElementNode) {
+						var node:ElementNode = cast child;
+						if (node.tag == 'p') {
+							if (node.children.length == 1) children = [for (c in children) if (c == node) node.children[0] else c];
+							else if (children.length == 1) children = node.children;
+						}
 					}
 				}
 
