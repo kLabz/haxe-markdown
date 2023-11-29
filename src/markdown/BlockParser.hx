@@ -469,10 +469,12 @@ class BlockHtmlSyntax extends BlockSyntax {
 
 class ListItem {
 	public var forceBlock:Bool = false;
+	public var isAbortedTask:Bool = false;
 	public var lines(default, null):Array<String>;
 
-	public function new(lines:Array<String>) {
+	public function new(lines:Array<String>, ?isAbortedTask:Bool) {
 		this.lines = lines;
+		this.isAbortedTask = isAbortedTask;
 	}
 }
 
@@ -511,11 +513,13 @@ class ListSyntax extends BlockSyntax {
 	override public function parse(parser:BlockParser):Node {
 		var items = [];
 		var childLines = [];
+		var isAbortedTask = false;
 
 		function endItem() {
 			if (childLines.length > 0) {
-				items.push(new ListItem(childLines));
+				items.push(new ListItem(childLines, isAbortedTask));
 				childLines = [];
+				isAbortedTask = false;
 			}
 		}
 
@@ -542,7 +546,8 @@ class ListSyntax extends BlockSyntax {
 						line = '<input type=checkbox disabled /> ' + line;
 
 					case "-":
-						line = '~~<input type=checkbox disabled /> ' + line + '~~';
+						line = '<input type=checkbox disabled /> ' + line;
+						isAbortedTask = true;
 
 					case _:
 				}
@@ -647,7 +652,7 @@ class ListSyntax extends BlockSyntax {
 			}
 
 			// Parse the item as a block or inline.
-			if (blockItem) {
+			var children = if (blockItem) {
 				// Block list item.
 				var children = parser.document.parseLines(item.lines);
 				var nonListChildren = children.filter(c -> {
@@ -669,12 +674,16 @@ class ListSyntax extends BlockSyntax {
 					}
 				}
 
-				itemNodes.push(new ElementNode('li', children));
+				children;
 			} else {
 				// Raw list item.
-				var contents = parser.document.parseInline(item.lines[0]);
-				itemNodes.push(new ElementNode('li', contents));
+				parser.document.parseInline(item.lines[0]);
 			}
+
+			var li = new ElementNode('li', children);
+			// Apply aborted task syntax
+			if (item.isAbortedTask) li.attributes.set("data-disabled", "");
+			itemNodes.push(li);
 		}
 
 		return new ElementNode(listTag, itemNodes);
