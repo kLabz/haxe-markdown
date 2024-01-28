@@ -6,7 +6,7 @@ import markdown.AST;
 	Translates a parsed AST to HTML.
 **/
 class HtmlRenderer implements NodeVisitor {
-	static var BLOCK_TAGS = new EReg('blockquote|h1|h2|h3|h4|h5|h6|hr|p|pre', '');
+	static var BLOCK_TAGS = new EReg('^(blockquote|h[1-6]|hr|p|pre)$', '');
 
 	var buffer:StringBuf;
 
