@@ -28,6 +28,7 @@ class InlineParser {
 		new AutolinkSyntax(),
 		new LinkSyntax(),
 		new ImgSyntax(),
+		new TasksSyntax(),
 		// "*" surrounded by spaces is left alone.
 		new TextSyntax(' \\* '),
 		// "_" surrounded by spaces is left alone.
@@ -314,6 +315,15 @@ class TagSyntax extends InlineSyntax {
 		parser.addNode(new ElementNode(tag, state.children));
 		return true;
 	}
+
+	public function onUnmatched(parser:InlineParser, parent:TagState, state:TagState) {
+		// Write the start tag as text.
+		parser.writeTextRange(state.startPos, state.endPos);
+
+		// Bequeath its children unto this tag.
+		for (child in state.children)
+			parent.children.push(child);
+	}
 }
 
 /**
@@ -512,6 +522,55 @@ class ImgSyntax extends TagSyntax {
 	}
 }
 
+class TasksSyntax extends TagSyntax {
+	public function new() {
+		super('^(?:\\[( |x|-)\\])([ \\t])', null, '$');
+	}
+
+	override function onMatch(parser:InlineParser):Bool {
+		var checkbox = ElementNode.empty('input');
+		checkbox.attributes.set('type', 'checkbox');
+
+		switch(pattern.matched(1)) {
+			case "x": checkbox.attributes.set('checked', '');
+			case "-": checkbox.attributes.set('data-aborted', '');
+			case " ": // Nothing to do
+			case _:
+		}
+
+		var state = new TagState(parser.pos, parser.pos + pattern.matched(0).length, this);
+		state.children.push(checkbox);
+		state.children.push(new TextNode(pattern.matched(2)));
+
+		parser.stack.push(state);
+		return true;
+	}
+
+	override public function onUnmatched(parser:InlineParser, parent:TagState, state:TagState) {
+		state.children.push(new TextNode(parser.source.substring(parser.start, parser.pos)));
+		parser.start = parser.pos;
+		onMatchEnd(parser, state);
+	}
+
+	override public function onMatchEnd(parser:InlineParser, state:TagState):Bool {
+		var label = ElementNode.withTag('label');
+
+		if (state.children.length > 0) {
+			var firstChild = state.children[0];
+			if (firstChild is ElementNode) {
+				var firstChild:ElementNode = cast firstChild;
+				if (firstChild.tag == 'input' && firstChild.attributes.exists('data-aborted')) {
+					label.attributes.set('data-aborted', '');
+				}
+			}
+		}
+
+		for (c in state.children) label.children.push(c);
+		parser.addNode(label);
+		return true;
+	}
+}
+
 // Matches backtick-enclosed inline code blocks.
 class CodeSyntax extends InlineSyntax {
 	public function new(pattern:String) {
@@ -574,12 +633,7 @@ class TagState {
 
 		// Flatten them out onto this tag.
 		for (unmatched in unmatchedTags) {
-			// Write the start tag as text.
-			parser.writeTextRange(unmatched.startPos, unmatched.endPos);
-
-			// Bequeath its children unto this tag.
-			for (child in unmatched.children)
-				children.push(child);
+			unmatched.syntax.onUnmatched(parser, this, unmatched);
 		}
 
 		// Pop this off the stack.

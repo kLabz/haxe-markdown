@@ -90,7 +90,8 @@ class BlockSyntax {
 	/**
 		A line indented four spaces. Used for code blocks and lists.
 	**/
-	static var RE_INDENT = new EReg('^(?:  |\t)(.*)$', '');
+	static var RE_INDENT = new EReg('^(?:    |\t)(.*)$', '');
+	static var RE_INDENT_2 = new EReg('^(?:  |\t)+(.*)$', '');
 
 	/**
 		GitHub style triple quoted code block.
@@ -120,13 +121,13 @@ class BlockSyntax {
 		three leading spaces before the marker and any number of spaces or tabs
 		after.
 	**/
-	static var RE_UL = new EReg('^ ?[*+-](?: \\[( |x|-)\\])?[ \\t]+(.*)$', '');
+	static var RE_UL = new EReg('^[ ]{0,1}[*+-][ \\t]+(.*)$', '');
 
 	/**
 		A line starting with a number like `123.`. May have up to three leading
 		spaces before the marker and any number of spaces or tabs after.
 	**/
-	static var RE_OL = new EReg('^ ?\\d+\\.(?: \\[( |x|-)\\])?[ \\t]+(.*)$', '');
+	static var RE_OL = new EReg('^[ ]{0,3}\\d+\\.[ \\t]+(.*)$', '');
 
 	/**
 		Gets the collection of built-in block parsers. To turn a series of lines
@@ -536,24 +537,10 @@ class ListSyntax extends BlockSyntax {
 			} else if (tryMatch(BlockSyntax.RE_UL) || tryMatch(BlockSyntax.RE_OL)) {
 				// End the current list item and start a new one.
 				endItem();
-				var line = match.matched(2);
-				switch (match.matched(1)) {
-					case null:
-					case "x":
-						line = '<input type=checkbox checked disabled /> ' + line;
-
-					case " ":
-						line = '<input type=checkbox disabled /> ' + line;
-
-					case "-":
-						line = '<input type=checkbox disabled /> ' + line;
-						isAbortedTask = true;
-
-					case _:
-				}
-				childLines.push(line);
-			} else if (tryMatch(BlockSyntax.RE_INDENT)) {
+				childLines.push(match.matched(1));
+			} else if (tryMatch(BlockSyntax.RE_INDENT_2)) {
 				// Strip off indent and add to current item.
+				childLines.push('<br>');
 				childLines.push(match.matched(1));
 			} else if (BlockSyntax.isAtBlockEnd(parser)) {
 				// Done with the list.
@@ -577,7 +564,7 @@ class ListSyntax extends BlockSyntax {
 		// * one
 		// * two
 		//
-		// Then it will insert the conents of the lines directly in the <li>, like:
+		// Then it will insert the contents of the lines directly in the <li>, like:
 		// <ul>
 		//	 <li>one</li>
 		//	 <li>two</li>
