@@ -498,6 +498,8 @@ class ParagraphSyntax extends BlockSyntax {
 			parser.advance();
 		}
 
+		// Note: this means that soft line breaks will always be rendered as `\n`
+		// TODO: handle commonmark's trailing `\` here?
 		var contents = parser.document.parseInline(childLines.join('\n'));
 		return new ElementNode('p', contents);
 	}
@@ -541,7 +543,6 @@ class ListSyntax extends BlockSyntax {
 				childLines.push(match.matched(1));
 			} else if (tryMatch(BlockSyntax.RE_INDENT_2)) {
 				// Strip off indent and add to current item.
-				childLines.push('<br>');
 				childLines.push(match.matched(1));
 			} else if (BlockSyntax.isAtBlockEnd(parser)) {
 				// Done with the list.
