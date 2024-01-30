@@ -88,10 +88,11 @@ class BlockSyntax {
 	static var RE_BLOCKQUOTE = new EReg('^[ ]{0,3}>[ ]?(.*)$', '');
 
 	/**
-		A line indented four spaces. Used for code blocks and lists.
+		A line indented two or four spaces. Used for lists (two spaces) and code
+		blocks (four spaces).
 	**/
-	static var RE_INDENT = new EReg('^(?:    |\t)(.*)$', '');
-	static var RE_INDENT_2 = new EReg('^(?:  |\t)+(.*)$', '');
+	static var RE_INDENT_2 = new EReg('^(?:  |\t)(.*)$', '');
+	static var RE_INDENT_4 = new EReg('^(?:    |\t)(.*)$', '');
 
 	/**
 		GitHub style triple quoted code block.
@@ -306,7 +307,7 @@ class BlockquoteSyntax extends BlockSyntax {
 // Parses preformatted code blocks that are indented four spaces.
 class CodeBlockSyntax extends BlockSyntax {
 	override function get_pattern():EReg {
-		return BlockSyntax.RE_INDENT;
+		return BlockSyntax.RE_INDENT_4;
 	}
 
 	override public function parseChildLines(parser:BlockParser):Array<String> {
@@ -624,7 +625,7 @@ class ListSyntax extends BlockSyntax {
 				BlockSyntax.RE_BLOCKQUOTE,
 				BlockSyntax.RE_HEADER,
 				BlockSyntax.RE_HR,
-				BlockSyntax.RE_INDENT,
+				BlockSyntax.RE_INDENT_4,
 				BlockSyntax.RE_UL,
 				BlockSyntax.RE_OL
 			];
