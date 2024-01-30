@@ -19,16 +19,17 @@ class InlineParser {
 		// that the regexp is fast than complete (for example, adding grouping
 		// is likely to slow the regexp down enough to negate its benefit).
 		// Since it is purely for optimization, it can be removed for debugging.
-		// TODO(amouravski): this regex will glom up any custom syntaxes unless
-		// they're at the beginning.
-		new AutolinkSyntaxWithoutBrackets(),
 		new TextSyntax(' {2,}\n', '<br />\n'),
-		new TextSyntax('\\s*[A-Za-z0-9]+'),
+		// Updated to not match words starting with h or f, as that would break
+		// auto links (no matter the order, since matching space character first
+		// will make this match before auto link recognizes a link)
+		new TextSyntax('\\s*[A-Za-egi-z0-9]+[A-Za-z0-9]*'),
 		// The real syntaxes.
 		new AutolinkSyntax(),
+		new AutolinkSyntaxWithoutBrackets(),
+		new TasksSyntax(),
 		new LinkSyntax(),
 		new ImgSyntax(),
-		new TasksSyntax(),
 		// "*" surrounded by spaces is left alone.
 		new TextSyntax(' \\* '),
 		// "_" surrounded by spaces is left alone.
@@ -255,7 +256,7 @@ class TextSyntax extends InlineSyntax {
 class AutolinkSyntax extends InlineSyntax {
 	public function new() {
 		// TODO(rnystrom): Make case insensitive.
-		super('<((http|https|ftp)://[^>]*)>');
+		super('<((http|https|ftp)://[^>]+)>');
 	}
 
 	override function onMatch(parser:InlineParser):Bool {
@@ -275,7 +276,7 @@ class AutolinkSyntax extends InlineSyntax {
 class AutolinkSyntaxWithoutBrackets extends InlineSyntax {
 	public function new() {
 		// TODO(rnystrom): Make case insensitive.
-		super('\\b((http|https|ftp)://[^\\s]*)\\b');
+		super('(http|ftp|https):\\/\\/([\\w_-]+(?:(?:\\.[\\w_-]+)+))([\\w.,@?^=%&:\\/~+#-]*[\\w@?^=%&\\/~+#-])');
 	}
 
 	override function tryMatch(parser) {
@@ -283,7 +284,7 @@ class AutolinkSyntaxWithoutBrackets extends InlineSyntax {
 	}
 
 	override function onMatch(parser:InlineParser):Bool {
-		var url = pattern.matched(1);
+		var url = pattern.matched(0);
 
 		var anchor = ElementNode.text('a', url.htmlEscape());
 		anchor.attributes.set('href', url);
@@ -525,14 +526,14 @@ class ImgSyntax extends TagSyntax {
 
 class TasksSyntax extends TagSyntax {
 	public function new() {
-		super('^(?:\\[( |x|-)\\])([ \\t])', null, '$');
+		super('^(?:(\\s*)\\[( |x|-)\\])(\\s)', null, '$');
 	}
 
 	override function onMatch(parser:InlineParser):Bool {
 		var checkbox = ElementNode.empty('input');
 		checkbox.attributes.set('type', 'checkbox');
 
-		switch(pattern.matched(1)) {
+		switch(pattern.matched(2)) {
 			case "x": checkbox.attributes.set('checked', '');
 			case "-": checkbox.attributes.set('data-aborted', '');
 			case " ": // Nothing to do
@@ -540,8 +541,9 @@ class TasksSyntax extends TagSyntax {
 		}
 
 		var state = new TagState(parser.pos, parser.pos + pattern.matched(0).length, this);
+		state.children.push(new TextNode(pattern.matched(1)));
 		state.children.push(checkbox);
-		state.children.push(new TextNode(pattern.matched(2)));
+		state.children.push(new TextNode(pattern.matched(3)));
 
 		parser.stack.push(state);
 		return true;
