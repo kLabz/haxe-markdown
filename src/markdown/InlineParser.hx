@@ -97,7 +97,8 @@ class InlineParser {
 		}
 
 		// Custom link resolver goes after the generic text syntax.
-		syntaxes.insert(1, new LinkSyntax(document.linkResolver));
+		var index = Lambda.findIndex(syntaxes, s -> s is LinkSyntax);
+		syntaxes.insert(index, new LinkSyntax(document.linkResolver));
 	}
 
 	public function parse():Array<Node> {
