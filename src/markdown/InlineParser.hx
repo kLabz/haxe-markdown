@@ -28,6 +28,7 @@ class InlineParser {
 		new AutolinkSyntax(),
 		new AutolinkSyntaxWithoutBrackets(),
 		new TasksSyntax(),
+		new FootnoteSyntax(),
 		new LinkSyntax(),
 		new ImgSyntax(),
 		// "*" surrounded by spaces is left alone.
@@ -520,6 +521,27 @@ class ImgSyntax extends TagSyntax {
 		}
 
 		parser.addNode(img);
+		return true;
+	}
+}
+
+class FootnoteSyntax extends TagSyntax {
+	public function new() {
+		super('\\[\\^([A-Za-z0-9_-]+)\\]');
+	}
+
+	override function onMatch(parser:InlineParser):Bool {
+		var ref = pattern.matched(1);
+
+		var footnote = parser.document.footnotes.get('^$ref');
+		if (footnote == null) return false;
+
+		var el = ElementNode.withTag('footnote');
+		el.attributes.set('ref', ref);
+		var link = ElementNode.text('a', ref);
+		link.attributes.set('title', footnote);
+		el.children.push(link);
+		parser.addNode(el);
 		return true;
 	}
 }

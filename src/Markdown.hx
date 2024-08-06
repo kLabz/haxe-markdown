@@ -48,6 +48,7 @@ class Markdown {
 		// replace windows line endings with unix, and split
 		var lines = ~/(\r\n|\r)/g.replace(markdown, '\n').split("\n");
 
+		document.parseFootnotes(lines);
 		document.parseRefLinks(lines);
 		return document.parseLines(lines);
 	}
@@ -62,14 +63,36 @@ class Markdown {
 **/
 class Document {
 	public var refLinks:Map<String, Link>;
+	public var footnotes:Map<String, String>;
 	public var inlineSyntaxes:Array<InlineSyntax>;
 	public var linkResolver:Resolver;
 	public var codeBlockSyntaxes:Map<String, String->String>;
 
 	public function new() {
 		refLinks = new Map();
+		footnotes = new Map();
 		codeBlockSyntaxes = new Map();
 		inlineSyntaxes = [];
+	}
+
+	public function parseFootnotes(lines:Array<String>) {
+		var indent = '^[ ]{0,3}'; // Leading indentation.
+		var id = '\\[(\\^[^\\]]+)\\]'; // Footnote id in [^brackets].
+		var footnote = new EReg('$indent$id:\\s+(.+)$', '');
+
+		for (i in 0...lines.length) {
+			if (!footnote.match(lines[i]))
+				continue;
+
+			// Parse the footnote.
+			var id = footnote.matched(1);
+			var content = footnote.matched(2);
+			footnotes.set(id, content);
+
+			// Remove it from the output. We replace it with a blank line which
+			// will get consumed by later processing.
+			lines[i] = '';
+		}
 	}
 
 	public function parseRefLinks(lines:Array<String>) {
