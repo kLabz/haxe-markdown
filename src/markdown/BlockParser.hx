@@ -80,7 +80,7 @@ class BlockSyntax {
 	/**
 		Leading (and trailing) `#` define atx-style headers.
 	**/
-	static var RE_HEADER = new EReg('^(#{1,6})(.*?)( +#* *)?$', '');
+	static var RE_HEADER = new EReg('^(#{1,6})(.*?)( \\{#(.*)\\})?( +#* *)?$', '');
 
 	/**
 		The line starts with `>` with one optional space after.
@@ -258,7 +258,13 @@ class HeaderSyntax extends BlockSyntax {
 		parser.advance();
 		var level = pattern.matched(1).length;
 		var contents = parser.document.parseInline(pattern.matched(2).trim());
-		return new ElementNode('h$level', contents);
+		var el = new ElementNode('h$level', contents);
+		if (pattern.matched(3) != null) {
+			el.attributes.set("id", pattern.matched(4));
+		} else {
+			// TODO: generate id from text contents
+		}
+		return el;
 	}
 }
 
