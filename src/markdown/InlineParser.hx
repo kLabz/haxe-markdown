@@ -37,6 +37,10 @@ class InlineParser {
 		new TextSyntax(' _ '),
 		// "~" surrounded by spaces is left alone.
 		new TextSyntax(' ~ '),
+		// "_" surrounded by word characters
+		new TextSyntax('\\w_\\w'),
+		// "~" surrounded by spaces is left alone.
+		new TextSyntax(' ~ '),
 		// Leave already-encoded HTML entities alone. Ensures we don't turn
 		// "&amp;" into "&amp;amp;"
 		new TextSyntax('&[#a-zA-Z0-9]*;'),
@@ -51,17 +55,17 @@ class InlineParser {
 		// Parse "~~deleted~~" tags.
 		new TagSyntax('~~', 'strike'),
 		// Parse "~deleted~" tags.
-		new TagSyntax('~', 'strike'),
+		// new TagSyntax('~', 'strike'),
 		// Parse "**strong**" tags.
 		new TagSyntax('\\*\\*', 'strong'),
-		// Parse "__strong__" tags.
-		new TagSyntax('__', 'strong'),
-		// Parse "*emphasis*" tags.
-		new TagSyntax('\\*', 'em'),
+		// Parse "__emphasis__" tags.
+		// new TagSyntax('__', 'em'),
+		// // Parse "*emphasis*" tags.
+		// new TagSyntax('\\*', 'em'),
 		// Parse "_emphasis_" tags.
 		new TagSyntax('\\b_', 'em', '_\\b'),
 		// Parse inline code within double backticks: "``code``".
-		new CodeSyntax('``\\s?((?:.|\\n)*?)\\s?``'),
+		// new CodeSyntax('`\\s?((?:.|\\n)*?)\\s?`'),
 		// Parse inline code within backticks: "`code`".
 		new CodeSyntax('`([^`]*)`') // We will add the LinkSyntax once we know about the specific link resolver.
 	];
@@ -277,6 +281,7 @@ class AutolinkSyntax extends InlineSyntax {
 class AutolinkSyntaxWithoutBrackets extends InlineSyntax {
 	public function new() {
 		// TODO(rnystrom): Make case insensitive.
+		// From https://stackoverflow.com/questions/6038061/regular-expression-to-find-urls-within-a-string
 		super('(http|ftp|https):\\/\\/([\\w_-]+(?:(?:\\.[\\w_-]+)+))([\\w.,@?^=%&:\\/~+#-]*[\\w@?^=%&\\/~+#-])');
 	}
 
@@ -553,6 +558,8 @@ class TasksSyntax extends TagSyntax {
 
 	override function onMatch(parser:InlineParser):Bool {
 		var checkbox = ElementNode.empty('input');
+		// TODO: add in reader instead... somehow
+		checkbox.attributes.set('disabled', '');
 		checkbox.attributes.set('type', 'checkbox');
 
 		switch(pattern.matched(2)) {
